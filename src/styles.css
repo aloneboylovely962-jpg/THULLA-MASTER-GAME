@@ -1,0 +1,31 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@500;600;700;800&display=swap');
+
+:root { font-family: Inter, system-ui, sans-serif; color: #f5f7f4; background: #050a08; }
+* { box-sizing: border-box; }
+body { margin: 0; min-width: 320px; min-height: 100vh; background: radial-gradient(circle at 50% 35%, #173c29 0, #08170f 42%, #040806 100%); }
+button { font: inherit; cursor: pointer; }
+.app-shell { min-height: 100vh; display: flex; flex-direction: column; padding: 22px; }
+.topbar { display:flex; align-items:center; justify-content:space-between; max-width:1200px; width:100%; margin:0 auto 18px; }
+.brand { font-size: clamp(20px, 4vw, 34px); font-weight:800; letter-spacing:.08em; }
+.brand span { color:#d8ad4a; }
+.subbrand { margin-top:4px; color:#8fa99b; font-size:10px; letter-spacing:.18em; }
+.room-pill { border:1px solid #315542; background:#0b1b13cc; padding:10px 14px; border-radius:999px; color:#8fa99b; font-size:11px; letter-spacing:.08em; }
+.room-pill strong { color:#f0c65b; }
+.game-table { position:relative; flex:1; min-height:600px; max-width:1200px; width:100%; margin:0 auto; border:1px solid #315542; border-radius:34px; overflow:hidden; background:radial-gradient(ellipse at center,#175b3a 0,#0d3a27 48%,#092319 100%); box-shadow:inset 0 0 100px #0008, 0 20px 60px #0008; }
+.game-table:before { content:''; position:absolute; inset:7%; border:1px solid #ffffff12; border-radius:50%; }
+.player { position:absolute; z-index:2; display:flex; gap:10px; align-items:center; background:#06130dcc; border:1px solid #426a55; border-radius:15px; padding:8px 12px; min-width:120px; box-shadow:0 8px 20px #0005; }
+.player small { display:block; color:#9ab0a4; font-size:10px; margin-top:3px; }
+.avatar { width:34px; height:34px; border-radius:50%; display:grid; place-items:center; background:#d8ad4a; color:#172116; font-weight:800; }
+.player-top { top:28px; left:50%; transform:translateX(-50%); }
+.player-left { left:24px; top:42%; }
+.player-right { right:24px; top:42%; }
+.center-stack { position:absolute; left:50%; top:46%; transform:translate(-50%,-50%); text-align:center; }
+.table-badge { display:inline-block; background:#d8ad4a; color:#182015; padding:6px 12px; border-radius:999px; font-size:10px; font-weight:800; letter-spacing:.12em; margin-bottom:12px; }
+.played-card { width:92px; height:128px; border-radius:10px; background:#f8f7f1; color:#1e2a21; display:flex; flex-direction:column; align-items:flex-start; padding:10px; box-shadow:0 15px 30px #0006; margin:auto; }
+.played-card span { font-size:25px; font-weight:800; }.played-card small { font-size:22px; color:#a83434; }
+.center-stack p { color:#b9ccc1; font-size:11px; }
+.hand { position:absolute; bottom:28px; left:50%; transform:translateX(-50%); display:flex; justify-content:center; padding:0 18px; }
+.card { width:74px; height:104px; margin-left:-9px; border:2px solid #d7d5cb; border-radius:10px; background:#f9f8f1; color:#172219; box-shadow:0 10px 18px #0007; display:flex; flex-direction:column; align-items:flex-start; padding:9px; transition:transform .18s, border-color .18s; }
+.card:first-child { margin-left:0; }.card:hover,.card.selected { transform:translateY(-16px); border-color:#e4bd59; }.card small { font-size:18px; }.card:nth-child(2) small,.card:nth-child(3) small { color:#a52f32; }
+.actionbar { max-width:1200px; width:100%; margin:18px auto 0; display:flex; align-items:center; justify-content:space-between; gap:12px; }.actionbar button { border-radius:11px; padding:12px 18px; border:1px solid #315542; }.secondary { background:#0b1b13; color:#b7c8be; }.primary { background:#d8ad4a; color:#172116; border-color:#d8ad4a !important; font-weight:800; }.status { color:#8fa99b; font-size:11px; }.dot { display:inline-block; width:7px; height:7px; background:#62d391; border-radius:50%; margin-right:6px; }
+@media (max-width:700px) { .app-shell{padding:12px}.game-table{min-height:560px;border-radius:22px}.player-left,.player-right{top:20%;}.player-left{left:10px}.player-right{right:10px}.hand{bottom:24px;width:100%;padding:0 8px}.card{width:52px;height:80px;padding:6px}.card span{font-size:16px}.card small{font-size:13px}.actionbar{flex-wrap:wrap}.status{order:-1;width:100%;text-align:center}.actionbar button{flex:1}.room-pill{display:none} }
