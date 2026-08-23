@@ -10,10 +10,23 @@ Original multiplayer Thulla/Bhabhi-style card game with its own branding, UI and
 - Interactive card-selection presentation
 - Mobile-friendly layout
 
+## Phase 2 — Card Game Engine
+
+- Standard 52-card deck generation
+- Fisher-Yates shuffle
+- 3–5 player dealing
+- Starting-player detection via 2♣
+- Follow-suit validation
+- Highest-card trick resolution
+- Turn progression and trick winner tracking
+- Automatic bot turns for the local prototype
+- Final-player/Bhabhi detection
+- New-game/reset flow and playable hand UI
+
 ## Roadmap
 
-1. Foundation & UI prototype
-2. Real card/deck rules and turn engine
+1. Foundation & UI prototype — complete
+2. Real card/deck rules and turn engine — complete
 3. Room creation + invite codes
 4. Real-time multiplayer server
 5. Accounts, profiles, coins and progression
