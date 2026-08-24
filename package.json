@@ -1,11 +1,9 @@
 {
   "name": "thulla-master-game",
   "private": true,
-  "version": "0.3.0",
+  "version": "0.3.1",
   "type": "module",
-  "engines": {
-    "node": ">=20"
-  },
+  "engines": { "node": ">=20" },
   "scripts": {
     "dev": "vite",
     "server": "node server/index.mjs",
@@ -21,5 +19,8 @@
     "react-dom": "latest",
     "ws": "latest"
   },
-  "devDependencies": {}
+  "devDependencies": {
+    "@types/react": "latest",
+    "@types/react-dom": "latest"
+  }
 }
