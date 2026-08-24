@@ -25,18 +25,31 @@ export class MultiplayerClient {
   private listeners = new Set<Listener>();
   private errorListeners = new Set<ErrorListener>();
   private session: { code: string; token: string } | null = JSON.parse(localStorage.getItem(storageKey) || 'null');
+  private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+  private reconnectAttempt = 0;
+  private closedByUser = false;
 
   connect(): Promise<void> {
+    this.closedByUser = false;
     return new Promise((resolve, reject) => {
-      this.socket = new WebSocket(serverUrl);
-      this.socket.onopen = () => {
-        if (this.session) {
-          this.send({ type: 'reconnect', code: this.session.code, token: this.session.token });
-        }
+      if (this.socket?.readyState === WebSocket.OPEN) return resolve();
+      const socket = new WebSocket(serverUrl);
+      this.socket = socket;
+      let settled = false;
+      socket.onopen = () => {
+        this.reconnectAttempt = 0;
+        if (this.session) this.send({ type: 'reconnect', code: this.session.code, token: this.session.token });
+        settled = true;
         resolve();
       };
-      this.socket.onerror = () => reject(new Error('Unable to connect to multiplayer server.'));
-      this.socket.onmessage = (event) => this.handle(event.data);
+      socket.onerror = () => {
+        if (!settled) { settled = true; reject(new Error('Unable to connect to multiplayer server.')); }
+      };
+      socket.onclose = () => {
+        if (this.socket === socket) this.socket = null;
+        if (!this.closedByUser) this.scheduleReconnect();
+      };
+      socket.onmessage = (event) => this.handle(event.data);
     });
   }
 
@@ -48,24 +61,29 @@ export class MultiplayerClient {
   onState(listener: Listener) { this.listeners.add(listener); return () => this.listeners.delete(listener); }
   onError(listener: ErrorListener) { this.errorListeners.add(listener); return () => this.errorListeners.delete(listener); }
 
-  async createRoom(name: string) {
-    await this.ensureConnected();
-    this.send({ type: 'create_room', name });
-  }
-
-  async joinRoom(code: string, name: string) {
-    await this.ensureConnected();
-    this.send({ type: 'join_room', code: code.trim(), name });
-  }
-
+  async createRoom(name: string) { await this.ensureConnected(); this.send({ type: 'create_room', name }); }
+  async joinRoom(code: string, name: string) { await this.ensureConnected(); this.send({ type: 'join_room', code: code.trim(), name }); }
   ready() { this.send({ type: 'ready' }); }
   startGame() { this.send({ type: 'start_game' }); }
   playCard(cardId: string) { this.send({ type: 'play_card', cardId }); }
   leave() { this.send({ type: 'leave' }); }
 
   destroy() {
+    this.closedByUser = true;
+    if (this.reconnectTimer) clearTimeout(this.reconnectTimer);
+    this.reconnectTimer = null;
     this.socket?.close();
     this.socket = null;
+  }
+
+  private scheduleReconnect() {
+    if (this.reconnectTimer || this.closedByUser || !this.session) return;
+    const delay = Math.min(30_000, 1_000 * 2 ** this.reconnectAttempt);
+    this.reconnectAttempt += 1;
+    this.reconnectTimer = setTimeout(() => {
+      this.reconnectTimer = null;
+      this.connect().catch(() => this.scheduleReconnect());
+    }, delay);
   }
 
   private send(message: Record<string, unknown>) {
@@ -77,13 +95,17 @@ export class MultiplayerClient {
   }
 
   private handle(raw: string) {
-    const message = JSON.parse(raw) as { type: string; state?: RemoteState; playerId?: string; token?: string; roomCode?: string; message?: string };
-    if (message.type === 'welcome' && message.token && message.roomCode) {
-      this.session = { code: message.roomCode, token: message.token };
-      localStorage.setItem(storageKey, JSON.stringify(this.session));
+    try {
+      const message = JSON.parse(raw) as { type: string; state?: RemoteState; token?: string; roomCode?: string; message?: string };
+      if (message.type === 'welcome' && message.token && message.roomCode) {
+        this.session = { code: message.roomCode, token: message.token };
+        localStorage.setItem(storageKey, JSON.stringify(this.session));
+      }
+      if (message.type === 'state' && message.state) this.listeners.forEach((listener) => listener(message.state!));
+      if (message.type === 'error' && message.message) this.errorListeners.forEach((listener) => listener(message.message!));
+    } catch {
+      this.errorListeners.forEach((listener) => listener('Received an invalid server response.'));
     }
-    if (message.type === 'state' && message.state) this.listeners.forEach((listener) => listener(message.state!));
-    if (message.type === 'error' && message.message) this.errorListeners.forEach((listener) => listener(message.message!));
   }
 }
 
