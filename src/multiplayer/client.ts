@@ -1,3 +1,5 @@
+import '../game/central-ui.css';
+
 export type RemoteCard={id:string;rank:string;suit:string};
 export type RemotePlayer={id:string;name:string;ready:boolean;connected:boolean;cardCount:number};
 export type RemoteState={code:string;hostId:string;phase:'lobby'|'playing'|'finished';currentPlayerId:string|null;leadSuit:string|null;trick:{playerId:string;card:RemoteCard}[];winnerPlayerId:string|null;loserPlayerId:string|null;matchId:string|null;players:RemotePlayer[];you:string;hand:RemoteCard[]};
