@@ -1,39 +1,22 @@
-export type RemoteCard = { id: string; rank: string; suit: string };
-export type RemotePlayer = { id: string; name: string; ready: boolean; connected: boolean; cardCount: number };
-export type RemoteState = { code: string; hostId: string; phase: 'lobby' | 'playing' | 'finished'; currentPlayerId: string | null; leadSuit: string | null; trick: { playerId: string; card: RemoteCard }[]; winnerPlayerId: string | null; loserPlayerId: string | null; players: RemotePlayer[]; you: string; hand: RemoteCard[] };
-type Listener = (state: RemoteState) => void;
-type ErrorListener = (message: string) => void;
-const storageKey = 'thulla-multiplayer-session';
-const authKey = 'thulla-auth-token';
-const serverUrl = import.meta.env.VITE_SERVER_URL || 'ws://localhost:8080';
+import '../game/central-ui.css';
 
-export class MultiplayerClient {
-  private socket: WebSocket | null = null;
-  private listeners = new Set<Listener>();
-  private errorListeners = new Set<ErrorListener>();
-  private session: { code: string; token: string } | null = JSON.parse(localStorage.getItem(storageKey) || 'null');
-  private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
-  private reconnectAttempt = 0;
-  private closedByUser = false;
-  get authToken() { return localStorage.getItem(authKey) || ''; }
-  setAuthToken(token: string) { localStorage.setItem(authKey, token); }
-  clearAuthToken() { localStorage.removeItem(authKey); }
-
-  connect(): Promise<void> { this.closedByUser = false; return new Promise((resolve, reject) => { if (this.socket?.readyState === WebSocket.OPEN) return resolve(); const socket = new WebSocket(serverUrl); this.socket = socket; let settled = false; socket.onopen = () => { this.reconnectAttempt = 0; if (this.session) this.send({ type: 'reconnect', code: this.session.code, token: this.session.token }); settled = true; resolve(); }; socket.onerror = () => { if (!settled) { settled = true; reject(new Error('Unable to connect to multiplayer server.')); } }; socket.onclose = () => { if (this.socket === socket) this.socket = null; if (!this.closedByUser) this.scheduleReconnect(); }; socket.onmessage = (event) => this.handle(event.data); }); }
-  async ensureConnected() { if (this.socket?.readyState === WebSocket.OPEN) return; await this.connect(); }
-  onState(listener: Listener) { this.listeners.add(listener); return () => this.listeners.delete(listener); }
-  onError(listener: ErrorListener) { this.errorListeners.add(listener); return () => this.errorListeners.delete(listener); }
-  async createRoom(name: string) { await this.ensureConnected(); this.send({ type: 'create_room', name, authToken: this.authToken }); }
-  async joinRoom(code: string, name: string) { await this.ensureConnected(); this.send({ type: 'join_room', code: code.trim(), name, authToken: this.authToken }); }
-  ready() { this.send({ type: 'ready' }); }
-  startGame() { this.send({ type: 'start_game' }); }
-  playCard(cardId: string) { this.send({ type: 'play_card', cardId }); }
-  leave() { this.send({ type: 'leave' }); }
-  destroy() { this.closedByUser = true; if (this.reconnectTimer) clearTimeout(this.reconnectTimer); this.reconnectTimer = null; this.socket?.close(); this.socket = null; }
-  private scheduleReconnect() { if (this.reconnectTimer || this.closedByUser || !this.session) return; const delay = Math.min(30_000, 1_000 * 2 ** this.reconnectAttempt); this.reconnectAttempt += 1; this.reconnectTimer = setTimeout(() => { this.reconnectTimer = null; this.connect().catch(() => this.scheduleReconnect()); }, delay); }
-  private send(message: Record<string, unknown>) { if (this.socket?.readyState !== WebSocket.OPEN) { this.errorListeners.forEach((listener) => listener('Multiplayer connection is not ready.')); return; } this.socket.send(JSON.stringify(message)); }
-  private handle(raw: string) { try { const message = JSON.parse(raw) as { type: string; state?: RemoteState; token?: string; roomCode?: string; message?: string }; if (message.type === 'welcome' && message.token && message.roomCode) { this.session = { code: message.roomCode, token: message.token }; localStorage.setItem(storageKey, JSON.stringify(this.session)); } if (message.type === 'state' && message.state) this.listeners.forEach((listener) => listener(message.state!)); if (message.type === 'error' && message.message) this.errorListeners.forEach((listener) => listener(message.message!)); } catch { this.errorListeners.forEach((listener) => listener('Received an invalid server response.')); } }
+export type RemoteCard={id:string;rank:string;suit:string};
+export type RemotePlayer={id:string;name:string;ready:boolean;connected:boolean;cardCount:number};
+export type RemoteState={code:string;hostId:string;phase:'lobby'|'playing'|'finished';currentPlayerId:string|null;leadSuit:string|null;trick:{playerId:string;card:RemoteCard}[];winnerPlayerId:string|null;loserPlayerId:string|null;matchId:string|null;players:RemotePlayer[];you:string;hand:RemoteCard[]};
+type Listener=(state:RemoteState)=>void;type ErrorListener=(message:string)=>void;
+const storageKey='thulla-multiplayer-session';const authKey='thulla-auth-token';const apiUrl='/api/game';
+const validRoomCode=(code:string)=>/^\d{6}$/.test(code);
+export class MultiplayerClient{private listeners=new Set<Listener>();private errorListeners=new Set<ErrorListener>();private session:{code:string}|null=this.readSession();private pollTimer:ReturnType<typeof setTimeout>|null=null;private polling=false;private destroyed=false;private retryAttempt=0;private onlineHandler=()=>{this.retryAttempt=0;this.schedulePoll(0)};private offlineHandler=()=>this.stopPolling();
+constructor(){window.addEventListener('online',this.onlineHandler);window.addEventListener('offline',this.offlineHandler)}
+get authToken(){return localStorage.getItem(authKey)||'';}setAuthToken(token:string){localStorage.setItem(authKey,token);}clearAuthToken(){localStorage.removeItem(authKey);}async connect(){this.destroyed=false;this.retryAttempt=0;await this.pollNow();}
+onState(listener:Listener){this.listeners.add(listener);return()=>this.listeners.delete(listener)}onError(listener:ErrorListener){this.errorListeners.add(listener);return()=>this.errorListeners.delete(listener)}
+async createRoom(_name?:string){this.retryAttempt=0;await this.action('create_room')}async joinRoom(code:string,_name?:string){const normalized=code.trim();if(!validRoomCode(normalized))throw new Error('Enter a 6-digit room code.');this.retryAttempt=0;await this.action('join_room',{code:normalized})}async ready(){await this.action('ready')}async startGame(){await this.action('start_game')}async playCard(cardId:string){await this.action('play_card',{cardId})}
+async leave(){const result=await this.action('leave');this.clearSession();return result}
+destroy(){this.destroyed=true;this.stopPolling();window.removeEventListener('online',this.onlineHandler);window.removeEventListener('offline',this.offlineHandler)}
+private readSession(){try{const value=JSON.parse(localStorage.getItem(storageKey)||'null');return value?.code&&validRoomCode(String(value.code))?{code:String(value.code)}:null}catch{return null}}
+private clearSession(){this.session=null;localStorage.removeItem(storageKey)}private stopPolling(){if(this.pollTimer)clearTimeout(this.pollTimer);this.pollTimer=null;this.polling=false}
+private schedulePoll(delay:number){if(this.destroyed||this.pollTimer||!navigator.onLine)return;this.pollTimer=setTimeout(()=>{this.pollTimer=null;void this.pollNow()},delay)}
+private async action(action:string,extra:Record<string,unknown>={}){try{const r=await fetch(apiUrl,{method:'POST',headers:{'content-type':'application/json',authorization:`Bearer ${this.authToken}`},body:JSON.stringify({action,...extra,...(this.session?.code?{code:this.session.code}:{})})});const d=await r.json().catch(()=>({}));if(!r.ok){const message=String(d.error||'Game request failed.');if(action==='state'&&/room not found|room expired|session expired/i.test(message))this.clearSession();throw new Error(message)}if(d.state){if(!this.session)this.session={code:d.state.code};localStorage.setItem(storageKey,JSON.stringify(this.session));this.retryAttempt=0;this.listeners.forEach(l=>l(d.state))}return d}catch(e){this.errorListeners.forEach(l=>l(e instanceof Error?e.message:'Game request failed.'));throw e}}
+private async pollNow(){if(this.destroyed||this.polling||!navigator.onLine)return;this.polling=true;try{if(this.session?.code)await this.action('state');this.retryAttempt=0}catch{this.retryAttempt=Math.min(this.retryAttempt+1,4)}finally{this.polling=false;if(!this.destroyed){const delay=this.session?.code?Math.min(8000,1200*2**Math.min(this.retryAttempt,3)):1200;this.schedulePoll(delay)}}}
 }
-export const multiplayerServerUrl = serverUrl;
-export const accountApiUrl = serverUrl.replace(/^ws/, 'http');
-export const authStorageKey = authKey;
+export const multiplayerServerUrl=apiUrl;export const accountApiUrl='';export const authStorageKey=authKey;
