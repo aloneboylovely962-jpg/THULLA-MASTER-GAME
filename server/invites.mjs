@@ -1,3 +1,5 @@
+import { randomUUID } from 'node:crypto';
+
 // Phase 11.4 room-invite helpers.
 // Invitations are short-lived and only target accepted friends. Room membership
 // remains authoritative in the multiplayer room map; this module only models invites.
@@ -5,8 +7,9 @@ const invites = new Map();
 const INVITE_TTL_MS = 2 * 60_000;
 
 export function createInvite({ senderId, recipientId, roomCode }) {
-  const id = crypto.randomUUID();
-  const invite = { id, senderId, recipientId, roomCode: String(roomCode), status: 'pending', createdAt: Date.now(), expiresAt: Date.now() + INVITE_TTL_MS };
+  const id = randomUUID();
+  const now = Date.now();
+  const invite = { id, senderId, recipientId, roomCode: String(roomCode), status: 'pending', createdAt: now, expiresAt: now + INVITE_TTL_MS };
   invites.set(id, invite);
   return invite;
 }
