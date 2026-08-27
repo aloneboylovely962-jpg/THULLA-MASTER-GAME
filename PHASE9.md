@@ -14,6 +14,7 @@
 - Turn ownership and card ownership
 - Final trick / Bhabhi outcome
 - Invalid and stale actions
+- Automated validation suite in `src/game/engine.validation.test.ts`
 
 ## 9.3 Release gate
 - `npm test` must pass.
@@ -22,4 +23,4 @@
 - Live multiplayer acceptance remains a separate manual gate.
 
 ## Status
-Phase 9 roadmap initialized. Existing automated game-rule coverage is retained and will be expanded while the server/client rule boundary is consolidated.
+9.1 shared-engine adapter is connected to the Netlify game API. 9.2 validation coverage is implemented; CI execution remains the verification gate.
