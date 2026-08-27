@@ -4,7 +4,7 @@
   "version":"0.5.0",
   "type":"module",
   "engines":{"node":">=20"},
-  "scripts":{"dev":"vite","server":"node server/index.mjs","start":"node server/index.mjs","build":"tsc -b && vite build","preview":"vite preview"},
+  "scripts":{"dev":"vite","server":"node server/index.mjs","start":"node server/index.mjs","build":"tsc -b && vite build","preview":"vite preview","test":"vitest run"},
   "dependencies":{"@netlify/blobs":"latest","@netlify/functions":"latest","@vitejs/plugin-react":"latest","vite":"latest","typescript":"latest","react":"latest","react-dom":"latest","ws":"latest","pg":"latest"},
-  "devDependencies":{"@types/react":"latest","@types/react-dom":"latest"}
+  "devDependencies":{"@types/react":"latest","@types/react-dom":"latest","vitest":"latest"}
 }
