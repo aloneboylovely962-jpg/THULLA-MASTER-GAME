@@ -9,6 +9,12 @@ export function createAuthoritativeGame(players: Array<{ id: string; name: strin
   return createGame(toEnginePlayers(players), deck);
 }
 
+export function hydrateAuthoritativeGame(input: { players: Array<{ id: string; name: string; hand: Card[] }>; currentPlayerId: string; trick: GameState['trick']; leadSuit: GameState['leadSuit']; }): GameState {
+  const players = toEnginePlayers(input.players);
+  if (!players.some((player) => player.id === input.currentPlayerId)) throw new Error('Current player not found.');
+  return { players, currentPlayerId: input.currentPlayerId, trick: [...input.trick], leadSuit: input.leadSuit, winnerPlayerId: null, lastTrickWinnerId: null, phase: 'playing', loserPlayerId: null };
+}
+
 export function applyAuthoritativeCard(state: GameState, playerId: string, cardId: string): GameState {
   return playCard(state, playerId, cardId);
 }
